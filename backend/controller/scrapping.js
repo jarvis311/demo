@@ -214,41 +214,40 @@ const scrap_bike = async (input, brand) => {
 
                     const brandobj = {
                         // php_id: php_id,
-                        category_id: category_id,
-                        brand_id: brand_id,
-                        bodytype_id: bodytype_id,
-                        brand_php_id: brand_php_id,
-                        category_php_id: category_php_id,
-                        php_bodytype_id: php_bodytype_id,
-                        link: link,
-                        scrap_type: input.scrap_type,
-                        model_name: model_name,
-                        fuel_type: fuel_type,
                         avg_rating: avg_rating,
-                        image: image,
-                        review_count: review_count,
-                        variant_name: variant_name,
-                        min_price: min_price,
-                        max_price: max_price,
-                        price_range: price_range,
-                        status: status,
-                        launched_at: launched_at,
-                        Launch_date: Launch_date,
-                        model_popularity: model_popularity,
-                        mileage: mileage,
+                        bodytype_id: bodytype_id,
+                        brand_id: brand_id,
+                        brand_php_id: brand_php_id,
+                        category_id: category_id,
+                        category_php_id: category_php_id,
                         engine: engine,
-                        style_type: style_type,
-                        max_power: max_power,
-                        showroom_price: showroom_price,
-                        on_road_price: parseInt(on_road_price),
-                        rto_price: rto_price ? parseInt(rto_price.replaceAll(',', '')) : 0,
-                        // body_type: bodytype_id,
+                        fuel_type: fuel_type,
+                        image: image,
                         insurance_price: insurance_price ? parseInt(insurance_price.replaceAll(',', '')) : 0,
-                        other_price: parseInt(other_price),
+                        is_content_writer: is_content_writer,
+                        is_latest: is_latest,
                         is_popular_search: is_popular_search,
                         is_upcoming: is_upcoming,
-                        is_latest: is_latest,
-                        is_content_writer: is_content_writer
+                        Launch_date: Launch_date,
+                        launched_at: launched_at,
+                        link: link,
+                        max_power: max_power,
+                        max_price: max_price,
+                        mileage: mileage,
+                        min_price: min_price,
+                        model_name: model_name,
+                        model_popularity: model_popularity,
+                        on_road_price: parseInt(on_road_price),
+                        other_price: parseInt(other_price),
+                        php_bodytype_id: php_bodytype_id,
+                        price_range: price_range,
+                        review_count: review_count,
+                        rto_price: rto_price ? parseInt(rto_price.replaceAll(',', '')) : 0,
+                        scrap_type: input.scrap_type,
+                        showroom_price: showroom_price,
+                        status: status,
+                        style_type: style_type,
+                        variant_name: variant_name
                     }
 
                     let bike_exist = await vehicle_information.findOne({ $and: [{ brand_id: brand_id }, { model_name: model_name }] })
@@ -797,8 +796,6 @@ export const get_bike_specification = async (url, vehicle_information, priceVari
         const vehicle_information_id = vehicle_information
         const variant_id = priceVariant
         await processTechnicalSpecs(colors_data, vehicle_information_id, variant_id, php_vehicle_information_id, php_variant_id)
-
-
     } catch (error) {
         console.log(error)
     }
@@ -812,9 +809,9 @@ async function processTechnicalSpecs(colors_data, vehicle_information_id, varian
             if ('specification' in colors_data.specsTechnicalJson) {
                 for (const value of colors_data.specsTechnicalJson.specification) {
                     const spec_name = value.title ? value.title : "NA";
+                    
                     let php_specification_id
                     let spec_exist = await VariantSpecification.findOne({ name: spec_name });
-                    // console.log("spec_name", spec_name)
                     let spec_id;
                     if (spec_exist) {
                         spec_id = spec_exist._id;
