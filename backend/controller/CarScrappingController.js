@@ -393,40 +393,39 @@ const get_variant_details = async (picture_url, vehicle_information, exShowRoomP
         }
 
     }
-    let used_var = {
-        variant_id: variantObjectId,
-        php_variant_id: php_variant_id,
-        vehicle_information_id: vehicle_information,
-        php_vehicle_information_id: php_vehicle_information_id
-
-    }
-
+ 
     // console.log('used_var', used_var)
     if ('specsTechnicalJson' in child_data) {
         if ('specification' in child_data.specsTechnicalJson) {
             for (const specification of child_data.specsTechnicalJson.specification) {
-                const spec_name = specification.title ? specification.title : "NA"
-                let cheakVariantSpecificationId = await VariantSpecification.findOne().select({ php_id: 1 }).sort({ php_id: -1 });
-                let tokenIdOfVariantSpec = cheakVariantSpecificationId ? cheakVariantSpecificationId.php_id + 1 : 1;
-                let idOfVarSpec = tokenIdOfVariantSpec;
 
+                const spec_name = specification.title ? specification.title : "NA"
+                
                 let spec_id
                 let php_specification_id
-                const carvar = {
-                    php_id: idOfVarSpec,
-                    name: spec_name
-                }
-
+            
                 const spec_exist = await VariantSpecification.findOne({ name: spec_name })
                 if (spec_exist) {
                     spec_id = spec_exist._id
                     php_specification_id = spec_exist.php_id
                 } else {
-                    const createVariant = await VariantSpecification.create(carvar)
+                    let cheakVariantSpecificationId = await VariantSpecification.findOne().select({ php_id: 1 }).sort({ php_id: -1 });
+                    let tokenIdOfVariantSpec = cheakVariantSpecificationId ? cheakVariantSpecificationId.php_id + 1 : 1;
+                   
+                    const createVariant = await VariantSpecification.create({name: spec_name, php_id:tokenIdOfVariantSpec})
                     spec_id = createVariant._id
                     php_specification_id = createVariant.php_id
                 }
-                used_var.specification_id = spec_id
+
+                var used_var = {
+                    variant_id: variantObjectId,
+                    php_variant_id: php_variant_id,
+                    vehicle_information_id: vehicle_information,
+                    php_vehicle_information_id: php_vehicle_information_id,
+                    specification_id:spec_id,
+                    php_specification_id:php_specification_id
+                }
+            
                 async function processItems1() {
                     for (const s of specification.items) {
                         let spec_name = s.text ? s.text : "NA"
@@ -439,21 +438,29 @@ const get_variant_details = async (picture_url, vehicle_information, exShowRoomP
                         used_var.value = spec_value
                         used_var.php_specification_id = php_specification_id
 
-                        const v_spe_exist = await VariantKey.findOne({
-                            vehicle_information_id: used_var.vehicle_information_id,
-                            variant_id: used_var.variant_id,
-                            specification_id: used_var.specification_id,
-                            name: spec_name,
+                
+                        let v_spe_exist = await VariantKey.findOne({
+                            $and: [
+                                { vehicle_information_id: vehicle_information },
+                                { variant_id: variantObjectId },
+                                { specification_id: spec_id },
+                                { name: spec_name },
+                            ],
                         });
 
                         // console.log('v_spe_exist 1>>>', v_spe_exist);
                         if (v_spe_exist) {
                             // console.log("IF -----")
-                            await VariantKey.findOneAndUpdate({ $and: [{ vehicle_information_id: used_var.vehicle_information_id }, { variant_id: used_var.variant_id }, { specification_id: used_var.specification_id }, { name: spec_name }] }, used_var)
+                            await VariantKey.findOneAndUpdate({ $and: [{ vehicle_information_id: used_var.vehicle_information_id }, { variant_id: used_var.variant_id }, { specification_id: used_var.specification_id }, { name: used_var.name }] }, used_var,{ new: true })
                         } else {
                             // console.log("ELSE -----")
+                            const checkIdOfVariantKey = await VariantKey.findOne().select({ php_id: 1 }).sort({ php_id: -1 });
+                            const tokenIdOfVariantKey = checkIdOfVariantKey ? checkIdOfVariantKey.php_id + 1 : 1;
+                            used_var.php_id = tokenIdOfVariantKey;
+
                             const cheakidOfKeySpec = await keyspecification.findOne().select({ php_id: 1 }).sort({ php_id: -1 });
                             const tokenIdOfKeySpec = cheakidOfKeySpec ? cheakidOfKeySpec.php_id + 1 : 1;
+
                             const findOrUpdateKeySpesificationn = await keyspecification.findOne({ name: spec_name })
                             if (findOrUpdateKeySpesificationn) {
                                 used_var.variant_key_id = findOrUpdateKeySpesificationn._id;
@@ -463,9 +470,8 @@ const get_variant_details = async (picture_url, vehicle_information, exShowRoomP
                                 used_var.variant_key_id = createKeySpece._id;
                                 used_var.php_variant_key_id = createKeySpece.php_id;
                             }
-                            const checkIdOfVariantKey = await VariantKey.findOne().select({ php_id: 1 }).sort({ php_id: -1 });
-                            const tokenIdOfVariantKey = checkIdOfVariantKey ? checkIdOfVariantKey.php_id + 1 : 1;
-                            used_var.php_id = tokenIdOfVariantKey;
+                            used_var.name = spec_name;
+                            used_var.value = spec_value;
 
                             await VariantKey.create(used_var);
                             // console.log("second");
@@ -961,7 +967,7 @@ const scrap_coman_code = async (url) => {
     const res = await axios.get(url)
     var crawler = cheerio.load(res.data).html()
     var html = crawler.split('</script>');
-    let data_respone = get_string_between(html[10], '; window.__INITIAL_STATE__ = ', "; window.__isWebp =  false;")
+    let data_respone = get_string_between(html[9], '; window.__INITIAL_STATE__ = ', "; window.__isWebp =  false;")
     var data1 = data_respone.split("; window.__CD_DATA__ =")
     var data2 = data1[0].split('" ",{}; window.__isMobile')
     let res_arr = JSON.parse(data2)
