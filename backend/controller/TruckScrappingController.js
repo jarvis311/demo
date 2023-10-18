@@ -18,29 +18,31 @@ var link;
 const scrap_truck = async (input, brand) => {
     try {
         link = input.link
-        var brand = brand
-        var brand_id = brand._id
+        let brand_id = brand._id
         let brand_php_id = brand.php_id
         const findCategoryId = await CategoryModel.findOne({ php_id: input.category })
+        console.log({findCategoryId})
         let category_id = findCategoryId._id
         let category_php_id = findCategoryId.php_id
-
+        let url
+        let brandName
+        
+        if (brand?.name.includes(' ')) {
+            brandName = brand?.name.toLowerCase().replace(/\s+/g, '-');
+        } else {
+            brandName = brand.name
+        }
         if (input.scrap_type == "brand") {
-            var new_bike_url = "https://www.bikedekho.com/" + brand.name + "-bikes"
-            // console.log("first 1")
+             url = 'https://trucks.cardekho.com/en/brands/' + brandName.toLowerCase() + '.html'
         } else {
             console.log("create _specific  _truck")
             var res_specific_truck = await get_specific_truck(link, input, brand)
             return res_specific_truck;
         }
 
-        var url = 'https://trucks.cardekho.com/en/brands/' + brand.name.toLowerCase() + '.html'
-        var data_res_arr = await scrap_common_model(url)
-        if ('trucks' in data_res_arr) {
-            if ('trucks' in data_res_arr.trucks) {
-                var truck_arr = data_res_arr.trucks.trucks.map(async (val) => {
-
-                    if (res_specific_truck == val.name) {
+        let data_res_arr = await scrap_common_model(url)
+        if ('items' in data_res_arr) {
+                    for (const val of data_res_arr.items) {
                         const model_name = val.name ? val.name : "NA"
                         const avg_rating = val.rating ? val.rating : "NA"
                         const review_count = val.reviewCount ? val.reviewCount : "NA"
@@ -49,25 +51,21 @@ const scrap_truck = async (input, brand) => {
                         let max_power = 0
                         let priceRange = 0
                         let key_specs = 0
-                        let bodytype_id = 0
                         if (val.keyFeatures) {
-                            val.keyFeatures.map((val2) => {
+                                for (const val2 of val.keyFeatures) {
                                 if (val2.name == 'Engine') {
                                     engine = val2.value
                                 }
                                 if (val2.name == "Power") {
                                     max_power = val2.value
                                 }
-                            })
+                            }
                         }
                         if (val.minPrice && val.maxPrice) {
                             priceRange = val.minPrice + '-' + val.maxPrice
                         } else {
                             priceRange = "NA"
                         }
-                        // var cheakid = await vehicle_information.find().select({ id: 1 }).sort({ _id: -1 }).limit(1)
-                        // var tokenid = cheakid.length !== 0 ? cheakid[0].id + 1 : 1
-                        // const id = tokenid
                         const showroom_price = val.minPrice ? val.minPrice : "NA"
                         const on_road_price = val.maxPrice ? val.maxPrice : "NA";
                         const min_price = val.minPrice ? val.minPrice : "NA";
@@ -77,7 +75,6 @@ const scrap_truck = async (input, brand) => {
                         const launched_at = val.variants[0].launchedAt ? val.variants[0].launchedAt : "NA";
                         const status = val.modelStatus ? val.modelStatus : "NA";
                         const price_range = priceRange;
-                        brand_id = brand_id ? brand_id : 0;
 
                         if (val.keyFeatures) {
                             key_specs = val.keyFeatures.map((key_feature) => {
@@ -90,16 +87,18 @@ const scrap_truck = async (input, brand) => {
                         } else {
                             key_specs = "NA";
                         }
-                        category_id = 3
-                        var url = "https://trucks.cardekho.com" + val.dcbDto.modelPriceURL
-                        var data_res_arr = await scrap_common_model(url)
+                        let url = "https://trucks.cardekho.com" + val.dcbDto.modelPriceURL
+                        let data_res_arr = await scrap_common_model(url)
+
                         const price_desc = data_res_arr.priceDeatilText.description ? data_res_arr.priceDeatilText.description : "NA"
                         var model_url = "https://trucks.cardekho.com/" + val.modelURL
 
                         const truckdata = {
                             // id: id,
                             category_id: category_id,
+                            category_php_id:category_php_id,
                             brand_id: brand_id,
+                            brand_php_id:brand_php_id,
                             link: link,
                             model_name: model_name,
                             fuel_type: fuel_type,
@@ -118,22 +117,22 @@ const scrap_truck = async (input, brand) => {
                             on_road_price: parseInt(on_road_price),
                             key_specs: key_specs
                         }
-                        var truck_exist = await vehicle_information.findOne({ $and: [{ brand_id: brand_id }, { model_name: model_name }] })
+                        let truck_exist = await vehicle_information.findOne({ $and: [{ brand_id: brand_id }, { model_name: model_name }] })
                         if (truck_exist) {
                             let update = await vehicle_information.findOneAndUpdate({ $and: [{ brand_id: brand_id }, { model_name: model_name }] }, truckdata, { new: true })
                             const vehicle_id = truck_exist.id
-                            const desc = await scrap_latest_update_higlight(model_url, vehicle_id)
-                            const variant = await scrap_truck_veriants(val.variants, vehicle_id, val.model_name, truckdata)
+                             await scrap_latest_update_higlight(model_url, vehicle_id,truck_exist.php_id)
+                             await scrap_truck_veriants(val.variants, vehicle_id, val.model_name, input, truck_exist.php_id)
                         } else {
-                            const craete = await vehicle_information.create(truckdata)
-                            const desc = await scrap_latest_update_higlight(model_url, craete._id)
-                            const variant = await scrap_truck_veriants(val.variants, craete._id, model_name)
+                            let cheakidOfVehicalInfo = await vehicle_information.findOne().select({ php_id: 1 }).sort({ php_id: -1 })
+                            const tokenIdOfVehicalInfo = cheakidOfVehicalInfo ? cheakidOfVehicalInfo.php_id + 1 : 1
+                   
+                            const craete = await vehicle_information.create({...truckdata, php_id: tokenIdOfVehicalInfo})
+                            console.log("Cteate")
+                             await scrap_latest_update_higlight(model_url, craete._id,craete.php_id)
+                             await scrap_truck_veriants(val.variants, craete._id, model_name,input, craete.php_id)
                         }
-                    } else {
-                        await helper.macthError('Truck Model Not Found')
-                    }
-                })
-            }
+                }
         }
 
     } catch (err) {
@@ -154,11 +153,11 @@ const scrap_common_model = async (url) => {
 }
 
 const scrap_latest_update_higlight = async (model_url, vehicle_id) => {
-    var data_res_arr = await scrap_common_model(model_url)
+    let data_res_arr = await scrap_common_model(model_url)
     if ('pageTitle' in data_res_arr) {
         if ('description' in data_res_arr.pageTitle) {
-            var highlights_desc = data_res_arr.pageTitle.description ? data_res_arr.pageTitle.description : "NA"
-            var update = await vehicle_information.findOneAndUpdate({ id: vehicle_id }, { highlights_desc: highlights_desc }, { new: true })
+            let highlights_desc = data_res_arr.pageTitle.description ? data_res_arr.pageTitle.description : "NA"
+            let update = await vehicle_information.findOneAndUpdate({ id: vehicle_id }, { highlights_desc: highlights_desc }, { new: true })
         }
     }
 }
@@ -178,7 +177,6 @@ const scrap_truck_veriants = async (variants, vehicle_id, name, input,phpVehicle
  
         for (const valdata of variants) {
         let url = "https://trucks.cardekho.com" + valdata.variantUrl
-        console.log(url)
         let data_res_arr = await scrap_common_model(url)
         let data = data_res_arr.overView
         const rating = data.rating ? data.rating : "NA"
@@ -191,11 +189,11 @@ const scrap_truck_veriants = async (variants, vehicle_id, name, input,phpVehicle
         const ex_show_room_rice = data.minimumPrice ? data.minimumPrice : "NA" // // issue with witch to <choose></choose>
         const on_road_price = data.maximumPrice ? data.maximumPrice : "NA" // issue with witch to choose
         const vehicle_information_id = vehicle_id
-        let engine = 0
+        let engine 
     if (data.keyFeatures) {
             data.keyFeatures.forEach(variant => {
                 if (variant.name == 'Engine') {
-                    engine = variant.value
+                    engine = variant.value || 0
                 }
             });
         }
@@ -420,7 +418,6 @@ const get_specific_truck = async (link, input, brand) => {
                 }
 
                 let modelUrl = `https://trucks.cardekho.com/${items.modelURL}`
-
              
                 const truckDataObject = {
                     category_id: categoryId,

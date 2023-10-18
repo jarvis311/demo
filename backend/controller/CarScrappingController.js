@@ -1043,7 +1043,6 @@ const insert_cars_without_items = async (data_res_arr, type, input, modelNameOfC
             //     const result = number * 100000;
             //     on_road_price = result;
             // }
-
             if (min_price.includes('Lakh')) {
                 const number = parseInt(min_price.replace(" Lakh", ""));
                 const result = number * 100000;
