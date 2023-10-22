@@ -738,6 +738,7 @@ async function get_other_details(url, images_url, dataObj, model_id, php_vehicle
                 if (value.text == "On-Road Price in delhi") {
                     on_road_price = value.value ? value.value.replace(',', '') : 0
                 }
+                
             })
             let cheakidPriceVariant = await PriceVariant.findOne().select({ php_id: 1 }).sort({ php_id: -1 })
             let tokenidPriceVariant = cheakidPriceVariant ? cheakidPriceVariant.php_id + 1 : 1
